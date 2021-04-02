@@ -18,6 +18,7 @@ class CreateProductVariantPricesTable extends Migration
             $table->unsignedBigInteger('product_variant_one')->nullable();
             $table->unsignedBigInteger('product_variant_two')->nullable();
             $table->unsignedBigInteger('product_variant_three')->nullable();
+            $table->string('title');
             $table->double('price');
             $table->integer('stock')->default(0);
             $table->foreignId('product_id')->constrained()->onDelete('cascade');

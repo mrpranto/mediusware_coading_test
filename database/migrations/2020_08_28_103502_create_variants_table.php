@@ -15,7 +15,7 @@ class CreateVariantsTable extends Migration
     {
         Schema::create('variants', function (Blueprint $table) {
             $table->id();
-            $table->string('title')->unique();
+            $table->string('title',100)->unique();
             $table->text('description')->nullable();
             $table->timestamps();
         });
