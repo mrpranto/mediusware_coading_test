@@ -19,21 +19,4 @@ class ProductVariantPrice extends Model
         return $this->belongsTo(Product::class);
     }
 
-
-    public function productVariantOne(): BelongsTo
-    {
-        return $this->belongsTo(ProductVariant::class,'product_variant_one', 'id');
-    }
-
-
-    public function productVariantTwo(): BelongsTo
-    {
-        return $this->belongsTo(ProductVariant::class,'product_variant_two', 'id');
-    }
-
-
-    public function productVariantThree(): BelongsTo
-    {
-        return $this->belongsTo(ProductVariant::class,'product_variant_three', 'id');
-    }
 }

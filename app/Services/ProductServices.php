@@ -29,24 +29,41 @@ class ProductServices
 
             'products' => $this->model::query()
                 ->with('variants', 'productVariantPrices')
-                ->when($request->title , function (Builder $builder) use($request){
-                    $builder->where('title', 'like', '%'.$request->title.'%');
+                ->when($request->title, function (Builder $builder) use ($request) {
+                    $builder->where('title', 'like', '%' . $request->title . '%');
                 })
-                ->when($request->variant , function (Builder $builder) use($request){
-                    $builder->whereHas('productVariants', function (Builder $builder) use($request){
+                ->when($request->variant, function (Builder $builder) use ($request) {
+                    $builder->whereHas('productVariants', function (Builder $builder) use ($request) {
                         $builder->where('id', $request->variant);
                     });
                 })
-                ->when($request->price_from and $request->price_to, function (Builder $builder) use($request){
-                    $builder->whereHas('productVariantPrices', function (Builder $builder) use($request){
+                ->when($request->price_from and $request->price_to, function (Builder $builder) use ($request) {
+                    $builder->whereHas('productVariantPrices', function (Builder $builder) use ($request) {
                         $builder->whereBetween('price', [$request->price_from, $request->price_to]);
                     });
                 })
-                ->when($request->date, function (Builder $builder) use($request){
+                ->when($request->date, function (Builder $builder) use ($request) {
                     $builder->whereDate('created_at', $request->date);
                 })
                 ->paginate(2)
         ];
+    }
+
+    public function validateProduct($request, $id = null): ProductServices
+    {
+        $request->validate([
+            'title' => 'required',
+            'sku' => 'required|unique:products,sku,' . $id,
+            'description' => 'required',
+            'images.*' => 'nullable',
+            'product_variant.*' => 'required',
+            'product_variant_prices.*' => 'required',
+        ], [
+            'title.required' => 'Product Name is required',
+            'sku.required' => 'Product SKU is required',
+        ]);
+
+        return $this;
     }
 
     public function storeProducts($request)
@@ -76,8 +93,14 @@ class ProductServices
         ]);
     }
 
-    private function storeProductVariant($request)
+    private function storeProductVariant($request, $product = null)
     {
+        if ($product) {
+
+            ProductVariant::query()->where('product_id', $product->id)->delete();
+
+        }
+
         foreach ($request->product_variant as $key => $variant) {
             foreach ($variant['tags'] as $tag) {
 
@@ -92,9 +115,16 @@ class ProductServices
         }
     }
 
-    private function storeProductVariantPrice($request)
+    private function storeProductVariantPrice($request, $product = null)
     {
+        if ($product) {
+
+            ProductVariantPrice::query()->where('product_id', $product->id)->delete();
+
+        }
+
         foreach ($request->product_variant_prices as $key => $product_variant_prices) {
+
             ProductVariantPrice::query()->create([
 
                 'title' => $product_variant_prices['title'],
@@ -107,8 +137,9 @@ class ProductServices
 
     }
 
-    private function storeProductImage($request)
+    private function storeProductImage($request, $product = null)
     {
+
         if (count($request->product_image)) {
 
             foreach ($request->product_image as $image) {
@@ -119,7 +150,7 @@ class ProductServices
                 ProductImage::query()->create([
 
                     'product_id' => $this->model->id,
-                    'file_path' => 'upload/'.$fileName,
+                    'file_path' => 'upload/' . $fileName,
                     'thumbnail' => true
 
                 ]);
@@ -129,5 +160,36 @@ class ProductServices
         }
 
     }
+
+
+    public function updateProduct($request, $product)
+    {
+
+        DB::transaction(function () use ($request, $product) {
+
+            $this->model = $this->productUpdate($request, $product);
+
+            $this->storeProductVariant($request, $product);
+
+            $this->storeProductVariantPrice($request, $product);
+
+            $this->storeProductImage($request, $product);
+
+        });
+
+    }
+
+    private function productUpdate($request, $product)
+    {
+        $product->update([
+            'title' => $request->title,
+            'sku' => $request->sku,
+            'description' => $request->description,
+        ]);
+
+
+        return $product;
+    }
+
 
 }

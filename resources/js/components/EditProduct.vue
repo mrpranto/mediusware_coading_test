@@ -1,17 +1,5 @@
 <template>
     <section>
-        <div class="row" v-if="isErrorExists">
-            <div class="col-12">
-                <div class="alert alert-danger">
-                    <ul>
-                        <li v-for="(index, error) in errors" :key="error">
-                            {{ errors.hasOwnProperty(error) ? errors[error][0] : null }}
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
         <div class="row">
             <div class="col-md-6">
                 <div class="card shadow mb-4">
@@ -122,37 +110,61 @@ export default {
         variants: {
             type: Array,
             required: true
+        },
+        product: {
+            type: Object,
+            required: true
+        },
+        productVariants: {
+            type: Object,
+            required: true
         }
     },
     data() {
         return {
-            product_name: '',
-            product_sku: '',
-            description: '',
+            product_name: this.product.title,
+            product_sku: this.product.sku,
+            description: this.product.description,
             images: [],
-            product_variant: [
-                {
-                    option: this.variants[0].id,
-                    tags: []
-                }
-            ],
-            product_variant_prices: [],
+            product_variant: [],
+
+            product_variant_prices: this.product.product_variant_prices,
             dropzoneOptions: {
                 url: 'https://httpbin.org/post',
                 thumbnailWidth: 150,
                 maxFilesize: 0.5,
                 headers: {"My-Awesome-Header": "header value"}
-            },
+            }
+        }
+    },
 
-            errors: {}
+    watch: {
+        productVariants: {
+            handler: function (variants) {
+                const keys =  Object.keys(variants)
+                if (keys.length && !this.product_variant.length) {
+                    keys.forEach((key) => {
+                        this.product_variant.push({
+                            option: key,
+                            tags: variants[key]
+                        })
+                    })
+                }
+            },
+            immediate: true
         }
     },
-    computed: {
-        isErrorExists() {
-            return Object.keys(this.errors).length
-        }
-    },
+
     methods: {
+        getProducts() {
+            axios.get('/product').then(response => {
+                console.log(response.data);
+            }).catch(error => {
+                console.log(error);
+            })
+        },
+
+
         // it will push a new object into product variant
         newVariant() {
             let all_variants = this.variants.map(el => el.id)
@@ -207,18 +219,20 @@ export default {
                 product_variant_prices: this.product_variant_prices
             }
 
-            axios.post('/product', product).then(() => {
+
+            axios.put('/product/'+this.product.id, product).then(response => {
                 window.location.href = '/product';
-            }).catch(({response}) => {
-                this.errors = response.data.errors
-                console.log(response.data.errors);
+            }).catch(error => {
+                console.log(error);
             })
+
+            console.log(product);
         }
 
 
     },
     mounted() {
-        console.log('Component mounted.')
+        console.log(this.product.id)
     }
 }
 </script>
